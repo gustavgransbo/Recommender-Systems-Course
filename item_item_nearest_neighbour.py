@@ -1,7 +1,9 @@
 """
 Item-Item based collaborative filtering. 
 
-Converted from the user-user script by chaning only two lines.
+Converted from the user-user script by chaning just a  few lines.
+Mentions of users in this code often refer to items, I just did
+not rename variables...
 """
 
 import pandas as pd
@@ -61,13 +63,15 @@ def predict_and_evaluate(R_train_deviations, R_test, R_test_user_means, W_test, 
 if __name__ == "__main__":
     
     # Load data
-    train_df = pd.read_csv('large_files/movielens_very_small_train.csv')
-    test_df = pd.read_csv('large_files/movielens_very_small_test.csv')
+    train_df = pd.read_csv('large_files/movielens_large_few_movies_train.csv')
+    test_df = pd.read_csv('large_files/movielens_large_few_movies_test.csv')
     
     # Set size variables
     n_users_train = train_df['userId'].nunique()
     n_users_test = test_df['userId'].nunique()
-    n_movies = 2500 # Hardcoded...
+    n_movies = len(set(train_df['movieId'].unique()) & set(test_df['movieId'].unique())) # Hardcoded...
+
+    print("Training users %d, Test users: %d, Movies: %d" % (n_users_train, n_users_test, n_movies))
 
     # Create sparse matrices (These are the only two lines that are changed from the user-user script)
     R_train = scipy.sparse.csr_matrix(sparse_from_df(train_df, n_users_train, n_movies).T)
@@ -81,13 +85,12 @@ if __name__ == "__main__":
     R_train_deviations = calculate_deviation_matrix(R_train, R_train_user_mean)
     R_test_deviations = calculate_deviation_matrix(R_test, R_test_user_mean)
 
-    # Calculate user-user similarities
+    # Calculate user-user similarities (With item-item we only calculate item similarities based on training)
     W_train = cosine_similarity(R_train_deviations)
-    W_test = cosine_similarity(R_test_deviations, R_train_deviations)
 
-    # Evaluate on train and test set
-    print("MSE on training set: %.4f" % predict_and_evaluate(R_train_deviations, R_train, R_train_user_mean, W_train, 25, training_set=True))
-    print("MSE on test set: %.4f" % predict_and_evaluate(R_train_deviations, R_test, R_test_user_mean, W_test, 25, training_set=False))
+    # Evaluate on train and test set (Never allow an item to be considered a neighbour of it self: training_set=true)
+    print("MSE on training set: %.4f" % predict_and_evaluate(R_train_deviations, R_train, R_train_user_mean, W_train, min(25, n_movies - 1), training_set=True))
+    print("MSE on test set: %.4f" % predict_and_evaluate(R_test_deviations, R_test, R_test_user_mean, W_train, min(25, n_movies - 1), training_set=True))
 
 
 """
@@ -96,18 +99,36 @@ Example Outputs
 With 10K training users and 10K test users:
 train_df = pd.read_csv('large_files/movielens_small_train.csv')
 test_df = pd.read_csv('large_files/movielens_small_test.csv')
-> 100%|██████████████████████████████████████████████████████████████████████████| 2500/2500 [00:05<00:00, 493.27it/s]
-> MSE on training set: 0.6732
-> 100%|██████████████████████████████████████████████████████████████████████████| 2500/2500 [00:03<00:00, 673.99it/s]
-> MSE on test set: 0.8400
+100%|██████████████████████████████████████████████████████████████████████████| 2500/2500 [00:05<00:00, 475.67it/s]
+MSE on training set: 0.6732
+100%|██████████████████████████████████████████████████████████████████████████| 2500/2500 [00:04<00:00, 566.61it/s]
+MSE on test set: 0.7265
 
 With 1K traing and 1K test users:
 train_df = pd.read_csv('large_files/movielens_very_small_train.csv')
 test_df = pd.read_csv('large_files/movielens_very_small_test.csv')
-> 100%|██████████████████████████████████████████████████████████████████████████| 2500/2500 [00:03<00:00, 712.70it/s]
-> MSE on training set: 0.6060
-> 100%|██████████████████████████████████████████████████████████████████████████| 2500/2500 [00:03<00:00, 719.69it/s]
-> MSE on test set: 0.7270
+100%|██████████████████████████████████████████████████████████████████████████| 2500/2500 [00:03<00:00, 706.17it/s]
+MSE on training set: 0.6060
+100%|██████████████████████████████████████████████████████████████████████████| 2500/2500 [00:03<00:00, 749.21it/s]
+MSE on test set: 0.7534
+
+Training users 25000, Test users: 10000, Movies: 20
+100%|███████████████████████████████████████████████████████████████████████████████| 20/20 [00:00<00:00, 53.99it/s]
+MSE on training set: 0.6363
+100%|██████████████████████████████████████████████████████████████████████████████| 20/20 [00:00<00:00, 109.58it/s]
+MSE on test set: 0.6353
+
+Thoughts:
+In all my experiments, user-user works better compared to item-item recommendations.
+This is the opposite of what the course suggests.
+I think I know hwy though! In my item-item based approach a allow no data leakage:
+- Similarities between items are only based on the  training set data
+- Items are not allowed to be considered similar to themselves
+=> Predictions on the test set are in no way based on the true prediction a test set 
+   user gave the movie being predicted.
+For the training set, weights are calculated between test set users and traing set users
+based on all ratings they have given. Including the predictions we are predicting.
+This is a kind of data leakage, that could inflate the scores we get on the test set.
 """
 
 

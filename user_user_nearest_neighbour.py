@@ -63,13 +63,13 @@ def predict_and_evaluate(R_train_deviations, R_test, R_test_user_means, W_test, 
 if __name__ == "__main__":
     
     # Load data
-    train_df = pd.read_csv('large_files/movielens_small_train.csv')
-    test_df = pd.read_csv('large_files/movielens_small_test.csv')
+    train_df = pd.read_csv('large_files/movielens_large_few_movies_test.csv')
+    test_df = pd.read_csv('large_files/movielens_large_few_movies_test.csv')
     
     # Set size variables
     n_users_train = train_df['userId'].nunique()
     n_users_test = test_df['userId'].nunique()
-    n_movies = 2500 # Hardcoded...
+    n_movies = len(set(train_df['movieId'].unique()) & set(test_df['movieId'].unique())) # Hardcoded...
 
     # Create sparse matrices
     R_train = sparse_from_df(train_df, n_users_train, n_movies)
@@ -85,11 +85,13 @@ if __name__ == "__main__":
 
     # Calculate user-user similarities
     W_train = cosine_similarity(R_train_deviations)
+    ## This is a little bit of cheating, since user similarities between test and training
+    ## set will be based on the true ratings of movies we are predicting later...
     W_test = cosine_similarity(R_test_deviations, R_train_deviations)
 
     # Evaluate on train and test set
-    print("MSE on training set: %.4f" % predict_and_evaluate(R_train_deviations, R_train, R_train_user_mean, W_train, 25, training_set=True))
-    print("MSE on test set: %.4f" % predict_and_evaluate(R_train_deviations, R_test, R_test_user_mean, W_test, 25, training_set=False))
+    print("MSE on training set: %.4f" % predict_and_evaluate(R_train_deviations, R_train, R_train_user_mean, W_train, min(25, n_movies - 1), training_set=True))
+    print("MSE on test set: %.4f" % predict_and_evaluate(R_train_deviations, R_test, R_test_user_mean, W_test, min(25, n_movies - 1), training_set=False))
 
 
 """
@@ -110,6 +112,12 @@ test_df = pd.read_csv('large_files/movielens_very_small_test.csv')
 MSE on training set: 0.7153
 100%|██████████████████████████████████████████████████████████████████████████| 1000/1000 [00:02<00:00, 458.89it/s]
 MSE on test set: 0.6873
+
+With 25K training and 10K test users, 20 Movies:
+100%|████████████████████████████████████████████████████████████████████████| 10000/10000 [00:13<00:00, 743.05it/s]
+MSE on training set: 0.1601
+100%|████████████████████████████████████████████████████████████████████████| 10000/10000 [00:11<00:00, 855.53it/s]
+MSE on test set: 0.1383
 """
 
 

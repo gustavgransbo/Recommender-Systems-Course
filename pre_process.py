@@ -22,6 +22,9 @@ n_users_train, n_users_test = args.n_users_train, args.n_users_test
 n_users = n_users_train + n_users_test
 n_movies = args.n_movies
 output_name = args.output_name
+random_users = True
+
+print("Using %s users" % ("random" if random_users else "top"))
 
 movielens_df = pd.read_csv('large_files/rating.csv')
 movielens_df.drop(columns=['timestamp'])
@@ -32,9 +35,15 @@ top_movies = top_most_rated_movies[:n_movies].index.values
 top_movies_df = movielens_df.loc[movielens_df.loc[:,'movieId'].isin(top_movies),:]
 print("We are down to %.2f %% of all reviews" % (100 * top_movies_df.shape[0] / movielens_df.shape[0]))
 
-# Keep a random subset of users
-user_ids = top_movies_df['userId'].unique()
-users_to_keep = np.random.choice(user_ids, n_users, replace=False)
+if random_users:
+    # Keep a random subset of users
+    user_ids = top_movies_df['userId'].unique()
+    users_to_keep = np.random.choice(user_ids, n_users, replace=False)
+else:
+    # Keep the users with the most rated movies
+    user_ids = top_movies_df['userId'].value_counts()
+    users_to_keep = np.array(list(user_ids.keys()[:n_users]))
+    np.random.shuffle(users_to_keep)
 
 # Split training and test set
 train_users, test_users = users_to_keep[:n_users_train], users_to_keep[n_users_train:]
