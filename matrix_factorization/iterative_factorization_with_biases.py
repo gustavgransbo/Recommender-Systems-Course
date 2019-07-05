@@ -61,34 +61,22 @@ def factorize_matrix(W, U, user_bias, movie_bias, average_rating, R, R_test, epo
     pbar.set_description("Test MSE: --")
     for epoch in pbar:
         
-        # Update W
+        # Update W and user_bias
         for i in range(len(W)):
             available_indexes = R[i,:].nonzero()[1]
             u = U[available_indexes]
             r = np.squeeze(np.asarray(R[i,available_indexes].todense()))
             W[i] = np.linalg.solve(u.T.dot(u), (r - user_bias[i] - movie_bias[available_indexes] - average_rating).dot(u).T)
-        # Update U
+            user_bias[i] = (r - W[i].dot(u.T) - movie_bias[available_indexes] - average_rating).mean()
+        # Update U and movie_bias
         for j in range(len(U)):
             available_indexes = R[:,j].nonzero()[0]
             r = np.squeeze(np.asarray(R[available_indexes,j].todense()))
             w = W[available_indexes]
             U[j] = np.linalg.solve(w.T.dot(w), (r - user_bias[available_indexes] - movie_bias[j] - average_rating).dot(w).T)
-        
-        # Update user_bias
-        for i in range(len(W)):
-            available_indexes = R[i,:].nonzero()[1]
-            u = U[available_indexes]
-            w = W[i]
-            r = np.squeeze(np.asarray(R[i,available_indexes].todense()))
-            user_bias[i] = (r - w.dot(u.T) - movie_bias[available_indexes] - average_rating).mean()
-        
-        # Update movie_bias
-        for j in range(len(U)):
-            available_indexes = R[:,j].nonzero()[0]
-            r = np.squeeze(np.asarray(R[available_indexes,j].todense()))
-            w = W[available_indexes]
-            u = U[j]
-            movie_bias[j] = (r - w.dot(u) - user_bias[available_indexes] - average_rating).mean()
+            movie_bias[j] = (r - w.dot(U[j]) - user_bias[available_indexes] - average_rating).mean()
+
+            
         mse_train_per_epoch[epoch] = mse_eval(R, W, U, user_bias, movie_bias, average_rating)
         mse_test_per_epoch[epoch] = mse_eval(R_test, W, U, user_bias, movie_bias, average_rating)
         pbar.set_description("Test MSE: %.3f" % mse_test_per_epoch[epoch])
@@ -144,5 +132,5 @@ Test set MSE: 0.74801688
 
 Thoughts:
 Results are very close to what I got without biases (slightly worse),
-but training now takes almost 3x as long. 
+with a similar training time. 
 """
