@@ -49,7 +49,7 @@ def mse_eval(R, W, U):
         Y_hat[idx] = predict(i, j, W, U)
     return mean_squared_error(Y, Y_hat)
 
-def factorize_matrix2(W, U, R, R_test, epochs = 50):
+def factorize_matrix(W, U, R, R_test, epochs = 50):
 
     mse_train_per_epoch = np.zeros(epochs)
     mse_test_per_epoch = np.zeros(epochs)
@@ -70,26 +70,13 @@ def factorize_matrix2(W, U, R, R_test, epochs = 50):
         mse_test_per_epoch[epoch] = mse_eval(R_test, W, U)
     return W, U, mse_train_per_epoch, mse_test_per_epoch
 
-def factorize_matrix(W, U, R, R_test, epochs = 50):
-    """
-    Find an approximate factorization of R as R_hat = W*U'
-    """
-    mse_train_per_epoch = np.zeros(epochs)
-    mse_test_per_epoch = np.zeros(epochs)
-    for epoch in tqdm(range(epochs)):
-        W, U = update_W_U(W, U, R)
-        mse_train_per_epoch[epoch] = mse_eval(R, W, U)
-        mse_test_per_epoch[epoch] = mse_eval(R_test, W, U)
-    return W, U, mse_train_per_epoch, mse_test_per_epoch
-
-
 if __name__ == "__main__":
 
     K = 10
     
     # Load data
-    train_df = pd.read_csv('../large_files/movielens_small_shared_users_train.csv')
-    test_df = pd.read_csv('../large_files/movielens_small_shared_users_test.csv')
+    train_df = pd.read_csv('large_files/movielens_small_shared_users_train.csv')
+    test_df = pd.read_csv('large_files/movielens_small_shared_users_test.csv')
 
     # Set size variables
     n_users = len(set(train_df['newUserId'].unique()).union(set(test_df['newUserId'].unique())))
@@ -101,10 +88,10 @@ if __name__ == "__main__":
     R_test = scipy.sparse.csr_matrix(sparse_from_df(test_df, n_users, n_movies))
 
     # Initialize factor matrices
-    W = np.random.rand(n_users, K)
-    U = np.random.rand(n_movies, K)
+    W = np.random.randn(n_users, K)
+    U = np.random.randn(n_movies, K)
 
-    W, U, train_results, test_results = factorize_matrix2(W, U, R_train, R_test, epochs = 20)
+    W, U, train_results, test_results = factorize_matrix(W, U, R_train, R_test, epochs = 20)
 
     f, ax = plt.subplots(figsize=(16,9))
     ax.plot(train_results)
@@ -113,15 +100,15 @@ if __name__ == "__main__":
     ax.set_ylabel('MSE')
     ax.set_xlabel('epochs')
     ax.set_title('Matrix Factorization, Mean Squared Error (MSE)')
-    plt.savefig('figures/iterative_factorization.png')
+    plt.savefig('matrix_factorization/figures/iterative_factorization.png')
 
-    np.save('models/iterative_W', W)
-    np.save('models/iterative_U', U)
+    np.save('matrix_factorization/models/iterative_W', W)
+    np.save('matrix_factorization/models/iterative_U', U)
 
 """
 Results:
-Train set MSE: 0.46929266
-Test set MSE: 0.744
+Train set MSE: 0.46645975
+Test set MSE: 0.73397646
 
 Thoughts:
 MSE on the test set is a little bit better than what I got using collabortive filtering
