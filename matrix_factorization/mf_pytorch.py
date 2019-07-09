@@ -142,8 +142,12 @@ Without regularization:
 >val Loss: 0.7770 MSE: 0.7770
 
 Comment:
-Code runs a little bit slower compared to the alternatig squares implementation,
-and the test MSE is a little bit worse. I bet I got something wrong in my implementation.
-I will try to veryify by also implementing the code i Keras.
+Code runs slower compared to the alternatig squares implementation,
+and the test MSE is worse. Unfortunately adding regularization in a
+sensible way is not straight forward, since the standard L2-regularization
+of PyTorch is calculated for all parameters of the model, for every batch,
+not just the weights activated by the batch as I did in alternating least squares.
+For me this lead to the regularization loss completely dominating the gradient, 
+and my network learned nothing. (All weights set close to 0.)
 
 """
